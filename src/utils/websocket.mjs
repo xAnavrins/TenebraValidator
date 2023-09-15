@@ -31,13 +31,14 @@ export class Tenebra extends EventEmitter {
                 case "keepalive":
                     this.keepalive && clearTimeout(this.keepalive)
                     this.keepalive = setTimeout(this.timedOut, TIMEOUT)
+                    this.emit("keepalive", data.server_time)
                     break;
 
                 case "hello":
                     this.wsSend({"type": "unsubscribe", "event": "blocks"})
                     this.wsSend({"type": "unsubscribe", "event": "ownTransactions"})
                     this.wsSend({"type": "unsubscribe", "event": "ownStake"})
-                    this.wsSend({"type": "subscribe", "event": "validators"})
+                    this.wsSend({"type": "subscribe", "event": "ownValidators"})
                     this.wsSend({"type": "subscribe", "event": "stakes"})
                     this.wsSend({"type": "me"}, data => {
                         this.address = data.address.address
