@@ -1,28 +1,38 @@
 import "dotenv/config"
-import { Tenebra } from "./utils/websocket.mjs";
-import { httpSend } from "./utils/http.mjs";
-import { NONCE, PRIVKEY } from "./vars.mjs";
+import { Tenebra } from "./utils/websocket.mjs"
+import { httpSend } from "./utils/http.mjs"
+import { NONCE, PRIVKEY } from "./vars.mjs"
+import { log } from "./utils/logging.mjs"
 
 let { url } = await httpSend("/ws/start", {privatekey: PRIVKEY})
-.catch(err => {
-    console.log("Error connecting to node", err)
-})
+.catch(err => log("Error connecting to node", err))
 
 let node = new Tenebra(url)
+let stakes = {}
 
 function submitBlock(nonce) {
     node.wsSend({"type": "submit_block", "nonce": nonce})
-    console.log("Block Submitted")
+    log("Block Submitted")
 }
 
-node.on("hello", hello => console.log(hello.motd))
-node.on("authenticated", me => console.log("Authed as", me.address.address))
+function updateStakes(newStakes) {
+    newStakes.map(stake => {
+        if (stake.active) {
+            stakes[stake.owner] = stake
+        } else {
+            delete stakes[stake.owner]
+        }
+    })
+}
+
+node.once("hello", hello => log(`Connected\n${hello.motd}`))
+node.once("authenticated", me => log("Authed as", me.address.address))
 
 node.on("stake", stake => {
-    console.log("Stake", stake)
+    updateStakes([stake])
 })
+
 node.on("validator", validator => {
-    console.log(`Validator "${validator}" "${node.address}"`)
     if (validator === node.address) {
         submitBlock(NONCE)
     }
@@ -31,17 +41,28 @@ node.on("validator", validator => {
 node.on("authenticated", me => {
     httpSend("/staking/validator")
     .then(data => {
-        console.log("CurrentValidator", data)
         if (data.validator === me.address.address) {
+            log("Late Validation!")
             submitBlock(NONCE)
         }
     })
+
+    httpSend("/staking")
+    .then((data) => {
+        updateStakes(data.stakes)
+    })
 })
 
-node.on("timedout", () => {
-    console.log("Connection timed out, exiting...")
+node.once("timedout", () => {
+    log("Connection timed out, exiting...")
     process.exit(1)
 })
 
-// node.on("close")
-// node.on("error")
+node.once("close", () => {
+    log("Connection closed, exiting...")
+    process.exit(1)
+})
+node.once("error", err => {
+    log(`Connection errored: ${err}, exiting...`)
+    process.exit(1)
+})

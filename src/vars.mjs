@@ -5,6 +5,7 @@ export const UAGENT    = process.env.UAGENT      || "Anav's Tenebra Validator"
 export const NONCE     = process.env.NONCE       || "SomeNonce"
 export const TIMEOUT   = process.env.TIMEOUT     || 15000
 export const STAKE     = process.env.STAKE       || -1
+export const LOGGING   = process.env.LOGGING === "true"
 export const HEADERS = {
     "Content-Type": "application/json",
     "User-Agent": UAGENT,
