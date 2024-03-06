@@ -1,3 +1,4 @@
+export const NODE_ENV  = process.env.NODE_ENV    || "production"
 export const SYNC_NODE = process.env.SYNC_NODE   || "https://tenebra.lil.gay"
 export const PRIVKEY   = process.env.PRIVATE_KEY
 export const TIMEZONE  = process.env.TIMEZONE

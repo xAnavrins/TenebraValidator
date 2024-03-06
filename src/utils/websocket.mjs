@@ -1,6 +1,7 @@
 import { HEADERS, TIMEOUT } from "../vars.mjs"
 import { WebSocket } from "ws"
 import { EventEmitter } from "events"
+import { httpSend } from "./http.mjs"
 
 export class Tenebra extends EventEmitter {
     constructor(url) {
@@ -10,6 +11,7 @@ export class Tenebra extends EventEmitter {
         this.keepalive && clearTimeout(this.keepalive)
         this.keepalive = setTimeout(this.timedOut, TIMEOUT)
         this.ws = new WebSocket(url, {headers: HEADERS})
+        this.stakes = {}
 
         this.ws.on("close", () => this.emit("close"))
         this.ws.on("error", err => this.emit("error", err))
@@ -42,7 +44,12 @@ export class Tenebra extends EventEmitter {
                     this.wsSend({"type": "subscribe", "event": "stakes"})
                     this.wsSend({"type": "me"}, data => {
                         this.address = data.address.address
-                        this.emit("authenticated", data)
+
+                        httpSend("/staking")
+                        .then((stake_data) => {
+                            this.updateStakes(stake_data.stakes)
+                            this.emit("ready", data)
+                        })
                     })
                     this.emit("hello", data)
                     break;
@@ -53,6 +60,7 @@ export class Tenebra extends EventEmitter {
                             this.emit("validator", data.validator)
                             break;
                         case "stake":
+                            this.updateStakes([data.stake])
                             this.emit("stake", data.stake)
                             break;
                     }
@@ -61,12 +69,20 @@ export class Tenebra extends EventEmitter {
         })
     }
 
+    updateStakes(newStakes) {
+        newStakes.map(stake => this.stakes[stake.owner] = stake)
+    }
+
     wsSend(data, callback) {
         let indexOf = this.callbacks.findIndex(i => !i)
         let id = indexOf === -1 ? this.callbacks.length : indexOf
         this.callbacks[id] = callback || (() => {})
         data.id = id
         this.ws.send(JSON.stringify(data))
+    }
+
+    submitBlock(nonce, callback) {
+        node.wsSend({"type": "submit_block", "nonce": nonce}, callback)
     }
 
     timedOut() {
