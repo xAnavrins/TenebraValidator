@@ -1,7 +1,7 @@
-import { HEADERS, TIMEOUT } from "../vars.mjs"
+import { HEADERS, TIMEOUT } from "./vars.mjs"
 import { WebSocket } from "ws"
 import { EventEmitter } from "events"
-import { httpSend } from "./http.mjs"
+import { httpSend } from "./utils/http.mjs"
 
 export class Tenebra extends EventEmitter {
     constructor(url) {
